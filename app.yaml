@@ -3,8 +3,8 @@ command:
   - run
   - app.py
 
-resources:
-  - name: ai-support-app-postgres
-    postgres:
-      project: ai-support-app
-      branch: production
+env:
+  - name: LAKEBASE_SECRET_SCOPE
+    value: "ai-support-database"
+  - name: LAKEBASE_SECRET_KEY
+    value: "lakebase-url"

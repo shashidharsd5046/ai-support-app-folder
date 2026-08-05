@@ -1,9 +1,6 @@
 import streamlit as st
-import psycopg2
-import os
-import uuid
 from datetime import datetime
-from databricks.sdk import WorkspaceClient
+import lakebase
 
 # Page configuration
 st.set_page_config(
@@ -12,31 +9,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# Database connection parameters from environment variables
-@st.cache_resource(ttl=900)  # Cache for 15 minutes (token refresh)
-def get_db_password():
-    """Generate OAuth token for database authentication."""
-    w = WorkspaceClient()
-    # Use w.postgres for Autoscaling Lakebase (new API)
-    endpoint = "projects/ai-support-app/branches/production/endpoints/primary"
-    cred = w.postgres.generate_database_credential(endpoint=endpoint)
-    return cred.token
-
 def get_db_connection():
     """Create a connection to the Lakebase Postgres database."""
     try:
-        conn = psycopg2.connect(
-            host=os.environ.get('PGHOST'),
-            database=os.environ.get('PGDATABASE', 'databricks_postgres'),
-            user=os.environ.get('PGUSER'),
-            password=get_db_password(),
-            sslmode='require',
-            port=int(os.environ.get('PGPORT', 5432))
-        )
-        return conn
+        return lakebase.get_connection().__enter__()
     except Exception as e:
         st.error(f"Database connection failed: {e}")
-        st.error(f"Environment: PGHOST={os.environ.get('PGHOST')}, PGDATABASE={os.environ.get('PGDATABASE')}, PGUSER={os.environ.get('PGUSER')}")
         return None
 
 # Initialize session state
