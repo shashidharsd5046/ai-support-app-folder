@@ -1,7 +1,9 @@
 import streamlit as st
 import psycopg2
 import os
+import uuid
 from datetime import datetime
+from databricks.sdk import WorkspaceClient
 
 # Page configuration
 st.set_page_config(
@@ -11,20 +13,31 @@ st.set_page_config(
 )
 
 # Database connection parameters from environment variables
+@st.cache_resource(ttl=900)  # Cache for 15 minutes (token refresh)
+def get_db_password():
+    """Generate OAuth token for database authentication."""
+    w = WorkspaceClient()
+    cred = w.database.generate_database_credential(
+        request_id=str(uuid.uuid4()),
+        instance_names=[os.environ.get('PGDATABASE', 'databricks_postgres')]
+    )
+    return cred.token
+
 def get_db_connection():
     """Create a connection to the Lakebase Postgres database."""
     try:
         conn = psycopg2.connect(
-            host=os.environ.get('LAKEBASE_HOST'),
-            database=os.environ.get('LAKEBASE_DATABASE'),
-            user=os.environ.get('LAKEBASE_USER'),
-            password=os.environ.get('LAKEBASE_PASSWORD'),
+            host=os.environ.get('PGHOST'),
+            database=os.environ.get('PGDATABASE', 'databricks_postgres'),
+            user=os.environ.get('PGUSER'),
+            password=get_db_password(),
             sslmode='require',
-            port=5432
+            port=int(os.environ.get('PGPORT', 5432))
         )
         return conn
     except Exception as e:
         st.error(f"Database connection failed: {e}")
+        st.error(f"Environment: PGHOST={os.environ.get('PGHOST')}, PGDATABASE={os.environ.get('PGDATABASE')}, PGUSER={os.environ.get('PGUSER')}")
         return None
 
 # Initialize session state

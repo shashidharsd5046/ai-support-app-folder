@@ -3,16 +3,6 @@ command:
   - run
   - app.py
 
-env:
-  - name: LAKEBASE_HOST
-    value: ep-jolly-sky-d8pdk3kw.database.us-east-2.cloud.databricks.com
-  - name: LAKEBASE_DATABASE
-    value: databricks_postgres
-  - name: LAKEBASE_USER
-    valueFrom: POSTGRES_USER_ai-support-app_production
-  - name: LAKEBASE_PASSWORD
-    valueFrom: POSTGRES_PASSWORD_ai-support-app_production
-
 resources:
   - name: ai-support-app-postgres
     postgres:
