@@ -17,10 +17,9 @@ st.set_page_config(
 def get_db_password():
     """Generate OAuth token for database authentication."""
     w = WorkspaceClient()
-    cred = w.database.generate_database_credential(
-        request_id=str(uuid.uuid4()),
-        instance_names=[os.environ.get('PGDATABASE', 'databricks_postgres')]
-    )
+    # Use w.postgres for Autoscaling Lakebase (new API)
+    endpoint = "projects/ai-support-app/branches/production/endpoints/primary"
+    cred = w.postgres.generate_database_credential(endpoint=endpoint)
     return cred.token
 
 def get_db_connection():
