@@ -1,6 +1,8 @@
 import streamlit as st
+import psycopg2
+import os
 from datetime import datetime
-import lakebase
+from databricks.sdk import WorkspaceClient
 
 # Page configuration
 st.set_page_config(
@@ -9,10 +11,36 @@ st.set_page_config(
     layout="wide"
 )
 
+# Database connection using OAuth tokens
+@st.cache_resource(ttl=600)  # Cache for 10 minutes
+def get_db_password():
+    """Generate OAuth token for Lakebase authentication."""
+    w = WorkspaceClient()
+    # For Autoscaling Lakebase, use the postgres API
+    endpoint = "projects/ai-support-app/branches/production/endpoints/primary"
+    try:
+        cred = w.postgres.generate_database_credential(endpoint=endpoint)
+        return cred.token
+    except Exception as e:
+        st.error(f"Token generation failed: {e}")
+        return None
+
 def get_db_connection():
     """Create a connection to the Lakebase Postgres database."""
     try:
-        return lakebase.get_connection().__enter__()
+        password = get_db_password()
+        if not password:
+            return None
+            
+        conn = psycopg2.connect(
+            host=os.environ.get('PGHOST'),
+            database=os.environ.get('PGDATABASE', 'databricks_postgres'),
+            user=os.environ.get('PGUSER'),
+            password=password,
+            port=int(os.environ.get('PGPORT', 5432)),
+            sslmode='require'
+        )
+        return conn
     except Exception as e:
         st.error(f"Database connection failed: {e}")
         return None
