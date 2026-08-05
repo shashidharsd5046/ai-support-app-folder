@@ -1,8 +1,6 @@
 import streamlit as st
-import psycopg2
-import os
 from datetime import datetime
-from databricks.sdk import WorkspaceClient
+import lakebase
 
 # Page configuration
 st.set_page_config(
@@ -11,36 +9,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Database connection using OAuth tokens
-@st.cache_resource(ttl=600)  # Cache for 10 minutes
-def get_db_password():
-    """Generate OAuth token for Lakebase authentication."""
-    w = WorkspaceClient()
-    # For Autoscaling Lakebase, use the postgres API
-    endpoint = "projects/ai-support-app/branches/production/endpoints/primary"
-    try:
-        cred = w.postgres.generate_database_credential(endpoint=endpoint)
-        return cred.token
-    except Exception as e:
-        st.error(f"Token generation failed: {e}")
-        return None
-
 def get_db_connection():
     """Create a connection to the Lakebase Postgres database."""
     try:
-        password = get_db_password()
-        if not password:
-            return None
-            
-        conn = psycopg2.connect(
-            host=os.environ.get('PGHOST'),
-            database=os.environ.get('PGDATABASE', 'databricks_postgres'),
-            user=os.environ.get('PGUSER'),
-            password=password,
-            port=int(os.environ.get('PGPORT', 5432)),
-            sslmode='require'
-        )
-        return conn
+        return lakebase.get_connection().__enter__()
     except Exception as e:
         st.error(f"Database connection failed: {e}")
         return None
@@ -97,7 +69,12 @@ if st.session_state.view == 'list':
             
             # Display tickets as cards
             for ticket in tickets:
-                ticket_id, title, status, created_by, created_at, message_count = ticket
+                ticket_id = ticket['ticket_id']
+                title = ticket['title']
+                status = ticket['status']
+                created_by = ticket['created_by']
+                created_at = ticket['created_at']
+                message_count = ticket['message_count']
                 
                 # Apply filter
                 if status not in status_filter:
@@ -149,7 +126,11 @@ elif st.session_state.view == 'detail' and st.session_state.selected_ticket:
         ticket = cursor.fetchone()
         
         if ticket:
-            ticket_id, title, status, created_by, created_at = ticket
+            ticket_id = ticket['ticket_id']
+            title = ticket['title']
+            status = ticket['status']
+            created_by = ticket['created_by']
+            created_at = ticket['created_at']
             
             # Back button
             if st.button("← Back to All Tickets"):
@@ -202,7 +183,10 @@ elif st.session_state.view == 'detail' and st.session_state.selected_ticket:
             
             # Display messages
             for message in messages:
-                message_id, message_text, author, msg_created_at = message
+                message_id = message['message_id']
+                message_text = message['message_text']
+                author = message['author']
+                msg_created_at = message['created_at']
                 
                 with st.container():
                     st.markdown(f"**{author}** • {msg_created_at.strftime('%Y-%m-%d %H:%M')}")
@@ -260,7 +244,7 @@ elif st.session_state.view == 'create':
                         VALUES (%s, 'open', %s)
                         RETURNING ticket_id
                     """, (ticket_title, created_by))
-                    new_ticket_id = cursor.fetchone()[0]
+                    new_ticket_id = cursor.fetchone()['ticket_id']
                     
                     # Insert initial message
                     cursor.execute("""
