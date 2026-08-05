@@ -29,7 +29,7 @@ def _lakebase_url() -> str:
 
 
 def connect():
-    """Return a raw psycopg2 connection with a RealDictCursor factory."""
+    """Return a raw psycopg2 connection with a RealDictCursor factory (caller manages lifecycle)."""
     return psycopg2.connect(_lakebase_url(), cursor_factory=RealDictCursor)
 
 
