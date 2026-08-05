@@ -28,10 +28,15 @@ def _lakebase_url() -> str:
     return base64.b64decode(secret.value).decode("utf-8")
 
 
+def connect():
+    """Return a raw psycopg2 connection with a RealDictCursor factory."""
+    return psycopg2.connect(_lakebase_url(), cursor_factory=RealDictCursor)
+
+
 @contextmanager
 def get_connection():
-    """Yield a raw psycopg2 connection with a RealDictCursor factory."""
-    conn = psycopg2.connect(_lakebase_url(), cursor_factory=RealDictCursor)
+    """Yield a raw psycopg2 connection with a RealDictCursor factory (auto-closes)."""
+    conn = connect()
     try:
         yield conn
     finally:

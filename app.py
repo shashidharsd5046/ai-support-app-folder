@@ -12,7 +12,7 @@ st.set_page_config(
 def get_db_connection():
     """Create a connection to the Lakebase Postgres database."""
     try:
-        return lakebase.get_connection().__enter__()
+        return lakebase.connect()
     except Exception as e:
         st.error(f"Database connection failed: {e}")
         return None
